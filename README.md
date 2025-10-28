@@ -1,3 +1,32 @@
+
+# 🎶 Voices of the Dance Floor
+
+## A map of movement, memory, and human connection.
+
+### 🌎 Overview
+
+Voices of the Dance Floor is an interactive map that captures Colorado’s Latin dance community! Through stories, photos, playlists, and reflections, this project celebrates the spaces where people communicate without words and through dance.
+
+---
+
+### ✨ Features
+- 🗺️ Interactive Map — Explore Latin dance venues across Colorado.
+- 💬 Add a Story — Upload your own dance memory, reflection, or playlist tied to a venue.
+- 🕺 Journal Prompts to inspire storytelling with questions like:
+  - What's your most memorable dance moment?
+  - How did this venue make you feel seen or connected?
+  - Why do you dance?
+- 🎶 Catch a Vibe — Add photos, videos, or voice clips that express your connection to a place.
+- 📅 Weekly Planner — See where to dance tonight or plan your social week.
+
+---
+
+### 💡 Inspiration
+
+This project was born from the Latin dance community in Denver - a community that is near and dear to my heart. As a salsa instructor, I've witnessed the power of dance to connect people and create a sense of belonging. I wanted to create a project that celebrates this community and the spaces where it happens.
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
