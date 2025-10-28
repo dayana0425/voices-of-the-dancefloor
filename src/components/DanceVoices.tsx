@@ -1,8 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import dynamic from "next/dynamic";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import {
   Music,
@@ -18,21 +16,41 @@ import {
   ThumbsUp,
 } from "lucide-react";
 
-// Fix Leaflet icon issue in Next.js
-if (typeof window !== "undefined") {
-  delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl:
-      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-    iconUrl:
-      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-    shadowUrl:
-      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-  });
+interface Voice {
+  id: number;
+  authorName: string;
+  authorTitle: string;
+  timestamp: string;
+  caption: string;
+  duration: string;
+  thumbsUp: number;
+  audioUrl?: string; // Optional as not all voices have it in the sample
+  vibe?: string; // Optional
+  journalPrompt?: string; // Optional
+}
+
+interface Venue {
+  id: number;
+  name: string;
+  day: string;
+  time: string;
+  style: string[];
+  address: string;
+  lat: number;
+  lng: number;
+  color: string;
+  vibe?: {
+    energy: string;
+    atmosphere: string;
+    playlist: string;
+    photo: string;
+    video: string;
+  };
+  voices: Voice[];
 }
 
 // Sample data structure with enhanced vibe data
-const VENUES = [
+const VENUES: Venue[] = [
   {
     id: 1,
     name: "Dynamic Bachata",
@@ -305,7 +323,13 @@ const DAYS = [
 ];
 
 // CountUp component for animated numbers
-const CountUp = ({ from = 0, to, duration = 2, delay = 0 }) => {
+interface CountUpProps {
+  from?: number;
+  to: number;
+  duration?: number;
+  delay?: number;
+}
+const CountUp = ({ from = 0, to, duration = 2, delay = 0 }: CountUpProps) => {
   const count = useMotionValue(from);
   const rounded = useTransform(count, (latest) => Math.round(latest));
 
@@ -321,27 +345,37 @@ const CountUp = ({ from = 0, to, duration = 2, delay = 0 }) => {
   return <motion.span>{rounded}</motion.span>;
 };
 
+// Dynamically import MapView to avoid SSR issues with Leaflet
+const MapView = dynamic(() => import("./MapView"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full flex items-center justify-center bg-gray-100">
+      <div className="text-gray-500">Loading map...</div>
+    </div>
+  ),
+});
+
 export default function VoicesOfTheDanceFloor() {
-  const [selectedVenue, setSelectedVenue] = useState(null);
+  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [showRecorder, setShowRecorder] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [playingVoice, setPlayingVoice] = useState(null);
+  const [playingVoice, setPlayingVoice] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState("calendar"); // 'calendar' or 'map'
-  const [hoveredVenue, setHoveredVenue] = useState(null);
+  const [hoveredVenue, setHoveredVenue] = useState<number | null>(null);
   const [likedVoices, setLikedVoices] = useState(new Set());
   const [selectedDay, setSelectedDay] = useState("Sunday");
   const [catchVibeMode, setCatchVibeMode] = useState(false);
-  const [selectedVibeVoice, setSelectedVibeVoice] = useState(null);
+  const [selectedVibeVoice, setSelectedVibeVoice] = useState<Voice | null>(null);
 
   // Center of Denver for the map
   const denverCenter: [number, number] = [39.7392, -104.9903];
 
-  const handleDaySelect = (day) => {
+  const handleDaySelect = (day: string) => {
     setSelectedDay(day);
     // Don't auto-navigate to map, just update the selection
   };
 
-  const handleThumbsUp = (voiceId, e) => {
+  const handleThumbsUp = (voiceId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     const newLiked = new Set(likedVoices);
     if (newLiked.has(voiceId)) {
@@ -352,11 +386,11 @@ export default function VoicesOfTheDanceFloor() {
     setLikedVoices(newLiked);
   };
 
-  const getVoiceThumbsUpCount = (voice) => {
+  const getVoiceThumbsUpCount = (voice: Voice) => {
     return voice.thumbsUp + (likedVoices.has(voice.id) ? 1 : 0);
   };
 
-  const getSortedVoices = (voices) => {
+  const getSortedVoices = (voices: Voice[]) => {
     return [...voices].sort((a, b) => {
       const aCount = getVoiceThumbsUpCount(a);
       const bCount = getVoiceThumbsUpCount(b);
@@ -364,7 +398,7 @@ export default function VoicesOfTheDanceFloor() {
     });
   };
 
-  const getVenuesByDay = (day) => {
+  const getVenuesByDay = (day: string) => {
     return VENUES.filter((v) => v.day === day);
   };
 
@@ -372,7 +406,7 @@ export default function VoicesOfTheDanceFloor() {
     return VENUES.flatMap((venue) => venue.voices);
   };
 
-  const handlePlayVoice = (voiceId) => {
+  const handlePlayVoice = (voiceId: number) => {
     if (playingVoice === voiceId) {
       setPlayingVoice(null);
     } else {
@@ -382,14 +416,15 @@ export default function VoicesOfTheDanceFloor() {
     }
   };
 
-  const handleCatchVibe = (voice) => {
+  const handleCatchVibe = (voice: Voice) => {
     setSelectedVibeVoice(voice);
     setCatchVibeMode(true);
   };
 
   // Catch a Vibe Modal
   if (catchVibeMode && selectedVibeVoice) {
-    const venue = VENUES.find((v) => v.voices.includes(selectedVibeVoice));
+    const venue = VENUES.find((v) => v.voices.some((voice) => voice.id === selectedVibeVoice.id));
+    if (!venue) return null; // Should not happen if selectedVibeVoice is valid, but for type safety
     return (
       <motion.div
         className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-800 to-orange-700 p-6"
@@ -535,7 +570,7 @@ export default function VoicesOfTheDanceFloor() {
                         whileHover={{ scale: 1.05 }}
                       >
                         <img
-                          src={venue.vibe.photo}
+                          src={venue.vibe?.photo}
                           alt="Venue atmosphere"
                           className="w-full h-32 object-cover"
                         />
@@ -550,7 +585,7 @@ export default function VoicesOfTheDanceFloor() {
                         whileHover={{ scale: 1.05 }}
                       >
                         <img
-                          src={venue.vibe.video}
+                          src={venue.vibe?.video}
                           alt="Dance moment"
                           className="w-full h-32 object-cover"
                         />
@@ -610,19 +645,19 @@ export default function VoicesOfTheDanceFloor() {
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-pink-500"></div>
                         <span className="text-gray-700">
-                          <strong>Energy:</strong> {venue.vibe.energy}
+                          <strong>Energy:</strong> {venue.vibe?.energy}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-purple-500"></div>
                         <span className="text-gray-700">
-                          <strong>Atmosphere:</strong> {venue.vibe.atmosphere}
+                          <strong>Atmosphere:</strong> {venue.vibe?.atmosphere}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                         <span className="text-gray-700">
-                          <strong>Playlist:</strong> {venue.vibe.playlist}
+                          <strong>Playlist:</strong> {venue.vibe?.playlist}
                         </span>
                       </div>
                     </div>
@@ -1000,6 +1035,7 @@ export default function VoicesOfTheDanceFloor() {
             .slice(0, 6)
             .map((voice, index) => {
               const venue = VENUES.find((v) => v.voices.includes(voice));
+              if (!venue) return null;
               return (
                 <motion.div
                   key={voice.id}
@@ -1021,7 +1057,7 @@ export default function VoicesOfTheDanceFloor() {
                 >
                   <motion.div
                     className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all cursor-pointer relative overflow-hidden"
-                    onClick={() => setSelectedVenue(venue)}
+                    onClick={() => setSelectedVenue(venue || null)}
                     whileHover={{
                       boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
                       borderColor: "rgba(255,255,255,0.4)",
@@ -1232,87 +1268,13 @@ export default function VoicesOfTheDanceFloor() {
             <div className="grid grid-cols-1 lg:grid-cols-3 h-[600px]">
               {/* Map Area with Leaflet */}
               <div className="lg:col-span-2 h-[600px]">
-                <MapContainer
+                <MapView
+                  venues={VENUES}
                   center={denverCenter}
-                  zoom={12}
-                  style={{ height: "100%", width: "100%" }}
-                  scrollWheelZoom={true}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  {VENUES.map((venue) => {
-                    // Create custom colored icon for each venue
-                    const colorMap = {
-                      "bg-purple-500": "#8b5cf6",
-                      "bg-red-500": "#ef4444",
-                      "bg-cyan-500": "#06b6d4",
-                      "bg-indigo-500": "#6366f1",
-                      "bg-yellow-500": "#eab308",
-                      "bg-blue-500": "#3b82f6",
-                      "bg-green-500": "#22c55e",
-                      "bg-pink-500": "#ec4899",
-                      "bg-orange-500": "#f97316",
-                    };
-
-                    const venueColor = colorMap[venue.color] || "#8b5cf6";
-
-                    const customIcon = L.divIcon({
-                      className: "custom-div-icon",
-                      html: `<div style="
-                        background-color: ${venueColor};
-                        width: 24px;
-                        height: 24px;
-                        border-radius: 50%;
-                        border: 3px solid white;
-                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                      "><div style="color: white; font-size: 12px; font-weight: bold;">${venue.name[0]}</div></div>`,
-                      iconSize: [24, 24],
-                      iconAnchor: [12, 12],
-                    });
-
-                    return (
-                      <Marker
-                        key={venue.id}
-                        position={[venue.lat, venue.lng]}
-                        icon={customIcon}
-                        eventHandlers={{
-                          click: () => setSelectedVenue(venue),
-                          mouseover: () => setHoveredVenue(venue.id),
-                          mouseout: () => setHoveredVenue(null),
-                        }}
-                      >
-                        <Popup>
-                          <div className="p-2">
-                            <div className="font-bold text-gray-900 text-sm mb-1">
-                              {venue.name}
-                            </div>
-                            <div className="text-xs text-gray-600 mb-2">
-                              {venue.day}s • {venue.time}
-                            </div>
-                            <div className="text-xs text-gray-500 mb-1">
-                              {venue.style.join(", ")}
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <Users size={12} />
-                              <span>{venue.voices.length} stories</span>
-                            </div>
-                            <button
-                              onClick={() => setSelectedVenue(venue)}
-                              className="mt-2 w-full bg-pink-500 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-pink-600"
-                            >
-                              View Stories
-                            </button>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    );
-                  })}
-                </MapContainer>
+                  onVenueClick={setSelectedVenue}
+                  hoveredVenue={hoveredVenue}
+                  setHoveredVenue={setHoveredVenue}
+                />
               </div>
 
               {/* Venue List Sidebar */}
