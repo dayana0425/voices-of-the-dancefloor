@@ -1,5 +1,9 @@
 
+
 # 🎶 Voices of the Dance Floor
+
+# [VIDEO DEMO](https://www.loom.com/share/84cd5b5143e345c9a58644bcd1943d49)
+# [LIVE DEMO](https://voices-of-the-dancefloor.vercel.app/)
 
 ## A map of movement, memory, and human connection.
 
@@ -16,7 +20,7 @@ Voices of the Dance Floor is an interactive map that captures Colorado’s Latin
   - What's your most memorable dance moment?
   - How did this venue make you feel seen or connected?
   - Why do you dance?
-- 🎶 Catch a Vibe — Add photos, videos, or voice clips that express your connection to a place.
+- 🎶 Catch a Vibe — Add photos, videos, or voice clips that express your connection to a place & brings the dance floor to life! 
 - 📅 Weekly Planner — See where to dance tonight or plan your social week.
 
 ---
